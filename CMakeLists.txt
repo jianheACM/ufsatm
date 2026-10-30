@@ -56,6 +56,10 @@ if(CDEPS_INLINE)
   add_definitions(-DCDEPS_INLINE)
 endif()
 
+if(AM4_CHEM)
+  list(APPEND _ufsatm_defs_private AM4_CHEM)
+endif()
+
 if(ENABLE_RRFS_WAR)
   list(APPEND _ufsatm_defs_private ENABLE_RRFS_WAR)
 endif()

@@ -138,6 +138,10 @@ if (FV3)
   add_definitions(-DINTERNAL_FILE_NML)
 endif()
 
+if(AM4_CHEM)
+  add_definitions(-DAM4_CHEM)
+endif()
+
 if(MULTI_GASES)
   add_definitions(-DMULTI_GASES)
 endif()
