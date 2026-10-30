@@ -8007,6 +8007,13 @@
   dimensions = ()
   type = real
   kind = kind_phys
+[lght_flash_factor]
+  standard_name = catchem_lnox_flash_factor
+  long_name = catchem lightning flash frequency factor
+  units = index
+  dimensions = ()
+  type = real
+  kind = kind_phys
 [min_land_frac_lght]
   standard_name = catchem_min_land_frac_lght
   long_name = catchem minimum land fraction for flash frequency calculation
