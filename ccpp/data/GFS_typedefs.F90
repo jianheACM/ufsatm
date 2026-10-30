@@ -1662,7 +1662,6 @@ module GFS_typedefs
     integer              :: ntage = physics_no_tracer
     integer              :: ntoh = physics_no_tracer
     integer              :: ntsoa = physics_no_tracer
-    integer              :: ntso4 = physics_no_tracer
     integer              :: ntaoanh = physics_no_tracer
     integer              :: ntextinct = physics_no_tracer
     !
@@ -6060,7 +6059,7 @@ module GFS_typedefs
     if (Model%gaschem_opt == 1) then
     Model%ntno2            = get_physics_tracer_index('no2', Model)
     Model%ntno             = get_physics_tracer_index('no', Model)
-    Model%ntno2             = get_physics_tracer_index('no2', Model)
+    Model%ntno2            = get_physics_tracer_index('no2', Model)
     Model%ntch2o           = get_physics_tracer_index('ch2o', Model)
     Model%ntnh3            = get_physics_tracer_index('nh3', Model)
     Model%ntco             = get_physics_tracer_index('co', Model)
@@ -6085,7 +6084,6 @@ module GFS_typedefs
     Model%ntage            = get_physics_tracer_index('age', Model)
     Model%ntoh             = get_physics_tracer_index('oh', Model)
     Model%ntsoa            = get_physics_tracer_index('soa', Model)
-    Model%ntso4            = get_physics_tracer_index('so4', Model)
     Model%ntaoanh          = get_physics_tracer_index('aoanh', Model)
     Model%ntextinct        = get_physics_tracer_index('extinction', Model)
 
@@ -8041,7 +8039,6 @@ module GFS_typedefs
       print *, ' ntage             : ', Model%ntage
       print *, ' ntoh              : ', Model%ntoh
       print *, ' ntsoa             : ', Model%ntsoa
-      print *, ' ntso4             : ', Model%ntso4
       print *, ' ntaoanh           : ', Model%ntaoanh
       print *, ' ntextinct         : ', Model%ntextinct
       endif

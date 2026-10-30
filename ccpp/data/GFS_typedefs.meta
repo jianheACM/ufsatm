@@ -7497,18 +7497,6 @@
   units = index
   dimensions = ()
   type = integer
-[ntno2_catchem]
-  standard_name = index_for_no2
-  long_name = index for no2
-  units = index
-  dimensions = ()
-  type = integer
-[ntno_catchem]
-  standard_name = index_for_no
-  long_name = index for no
-  units = index
-  dimensions = ()
-  type = integer
 [ntnh3]
   standard_name = index_for_nh3
   long_name = index for nh3
@@ -7638,12 +7626,6 @@
 [ntsoa]
   standard_name = index_for_soa
   long_name = index for soa
-  units = index
-  dimensions = ()
-  type = integer
-[ntso4]
-  standard_name = index_for_so4
-  long_name = index for so4
   units = index
   dimensions = ()
   type = integer
