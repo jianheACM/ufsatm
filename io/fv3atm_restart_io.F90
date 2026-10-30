@@ -94,6 +94,21 @@ module fv3atm_restart_io_mod
   !>@ Filename template for monthly GB fire daa for CATChem. FMS may add grid and tile information to the name
   character(len=32), parameter  :: fn_gbbepx = 'FIRE_GBBEPx_data.nc'
 
+  !>@ Filename template for AM4 emissions data. FMS may add grid and tile information to the name
+  character(len=32), parameter  :: fn_emi3d    = 'EMI3D_data.nc'
+
+  !>@ Filename template for AM4 emissions data. FMS may add grid and tile information to the name
+  character(len=32), parameter  :: fn_emiairc  = 'EMIAIRC_data.nc'
+
+  !>@ Filename template for AM4 emissions data. FMS may add grid and tile information to the name
+  character(len=32), parameter  :: fn_emivol   = 'EMIVOL_data.nc'
+
+  !>@ Filename template for dfdage for CATChem with AM4 opt. FMS may add grid and tile information to the name
+  character(len=32), parameter  :: fn_dfdage = 'dfdage3_data.nc'
+
+  !>@ Filename template for depvel for CATChem with AM4 opt. FMS may add grid and tile information to the name
+  character(len=32), parameter  :: fn_depvel = 'depvel_data.nc'
+
   real(kind_phys), parameter:: zero = 0.0, one = 1.0
 
   !> Instance of phy_data_type for quilt output of physics diagnostic data
@@ -604,13 +619,15 @@ contains
     type(rrfs_sd_state_type) :: rrfs_sd_state
     type(rrfs_sd_emissions_type) :: rrfs_sd_emis
     type(catchem_emissions_type) :: catchem_emis
+    type(catchem_am4_type) :: catchem_am4
     type(Oro_scale_io_data_type) :: oro_ss
     type(Oro_scale_io_data_type) :: oro_ls
     type(Sfc_io_data_type) :: sfc
     type(Oro_io_data_type) :: oro
 
     type(FmsNetcdfDomainFile_t) :: Oro_restart, Sfc_restart, dust12m_restart,dust_restart, emi_restart, rrfssd_restart,&
-                                   emi2_restart, gbbepx_restart
+                                   emi2_restart, gbbepx_restart, dfdage_restart, depvel_restart, &
+                                   emi3d_restart, emiairc_restart, emivol_restart
     type(FmsNetcdfDomainFile_t) :: Oro_ls_restart, Oro_ss_restart
     type(domain2D) :: domain_for_read
     integer :: read_layout(2)
@@ -704,6 +721,12 @@ contains
 
     if_catchem: if(Model%cplchp) then  ! for CATChem
 
+      ! AM4 input dimensions and tracer setup are selected by gaschem_opt.
+      if (Model%do_am4chem .and. Model%gaschem_opt /= 1) &
+        call mpp_error(FATAL, 'CATChem AM4 IO requires gaschem_opt=1')
+      if (Model%gaschem_opt /= 0 .and. Model%gaschem_opt /= 1) &
+        call mpp_error(FATAL, 'Unsupported CATChem gaschem_opt for input files')
+
     !--- Dust input FILE
     !--- open file
     infile=trim(indir)//'/'//trim(fn_dust)
@@ -729,7 +752,11 @@ contains
       if (.not.amiopen) call mpp_error( FATAL, 'Error with opening file'//trim(infile) )
 
       ! Register axes and variables, allocate memory
-      call catchem_emis%register_emi(emi_restart, Atm_block)
+      if (Model%gaschem_opt == 1) then
+        call catchem_am4%register_emi(emi_restart, Atm_block)
+      else
+        call catchem_emis%register_emi(emi_restart, Atm_block)
+      endif
 
       !--- read anthropogenic emi restart/data
       call mpp_error(NOTE,'reading emi information from INPUT/emi_data.tile*.nc')
@@ -737,7 +764,11 @@ contains
       call close_file(emi_restart)
 
       !--- Copy to Sfcprop and free temporary arrays:
-      call catchem_emis%copy_emi(Model, Sfcprop, Atm_block)
+      if (Model%gaschem_opt == 1) then
+        call catchem_am4%copy_emi(Model, Sfcprop, Atm_block)
+      else
+        call catchem_emis%copy_emi(Model, Sfcprop, Atm_block)
+      endif
 
       !----------------------------------------------
 
@@ -772,15 +803,116 @@ contains
         amiopen = open_file(gbbepx_restart, trim(infile), 'read', domain=fv_domain, &
                             is_restart=.true., dont_add_res_to_filename=.true.)
         if (.not.amiopen) call mpp_error(FATAL, 'Error with opening file '//trim(infile))
-
-        call catchem_emis%register_gbbepx(gbbepx_restart, Atm_block)
+        if (Model%gaschem_opt == 1) then
+          call catchem_am4%register_gbbepx(gbbepx_restart, Atm_block)
+        else
+          call catchem_emis%register_gbbepx(gbbepx_restart, Atm_block)
+        endif
 
         call mpp_error(NOTE, 'reading gbbepx information from '//trim(infile))
         call read_restart(gbbepx_restart)
         call close_file(gbbepx_restart)
-
-        call catchem_emis%copy_gbbepx(Model, Sfcprop, Atm_block, ie)
+        if (Model%gaschem_opt == 1) then
+          call catchem_am4%copy_gbbepx(Model, Sfcprop, Atm_block, ie)
+        else
+          call catchem_emis%copy_gbbepx(Model, Sfcprop, Atm_block, ie)
+        endif
       enddo
+
+      if (Model%gaschem_opt == 1) then  ! for gfdl-am4 gas
+        !----------------------------------------------
+        if (Model%read_emis3d) then
+          !--- open emi3d files
+          infile=trim(indir)//'/'//trim(fn_emi3d)
+          amiopen=open_file(emi3d_restart, trim(infile), 'read', domain=fv_domain, is_restart=.true., dont_add_res_to_filename=.true.)
+          if (.not.amiopen) call mpp_error( FATAL, 'Error with opening file'//trim(infile) )
+
+          ! Register axes and variables, allocate memory
+          call catchem_am4%register_emi3d(emi3d_restart, Atm_block)
+
+          !--- read emi3d restart/data
+          call mpp_error(NOTE,'reading 3d biomass burning emissions from INPUT/EMI3D_data.tile*.nc')
+          call read_restart(emi3d_restart)
+          call close_file(emi3d_restart)
+
+          !--- Copy to Sfcprop and free temporary arrays:
+          call catchem_am4%copy_emi3d(Model, Sfcprop, Atm_block)
+
+          !--- open volcanic emis
+          infile=trim(indir)//'/'//trim(fn_emivol)
+          amiopen=open_file(emivol_restart, trim(infile), 'read', domain=fv_domain, is_restart=.true., dont_add_res_to_filename=.true.)
+          if (.not.amiopen) call mpp_error( FATAL, 'Error with opening file'//trim(infile) )
+
+          ! Register axes and variables, allocate memory
+          call catchem_am4%register_emivol(emivol_restart, Atm_block)
+
+          !--- read emivol restart/data
+          call mpp_error(NOTE,'reading 3d volcanic emissions from INPUT/EMIVOL_data.tile*.nc')
+          call read_restart(emivol_restart)
+          call close_file(emivol_restart)
+
+          !--- Copy to Sfcprop and free temporary arrays:
+          call catchem_am4%copy_emivol(Model, Sfcprop, Atm_block)
+        endif
+
+
+        if (Model%read_emiairc) then
+          !--- open 3d aircraft emis
+          infile=trim(indir)//'/'//trim(fn_emiairc)
+          amiopen=open_file(emiairc_restart, trim(infile), 'read', domain=fv_domain, is_restart=.true., dont_add_res_to_filename=.true.)
+          if (.not.amiopen) call mpp_error( FATAL, 'Error with opening file'//trim(infile) )
+
+          ! Register axes and variables, allocate memory
+          call catchem_am4%register_emiairc(emiairc_restart, Atm_block)
+
+          !--- read emiairc restart/data
+          call mpp_error(NOTE,'reading 3d aircraft emissions from INPUT/EMIAIRC_data.tile*.nc')
+          call read_restart(emiairc_restart)
+          call close_file(emiairc_restart)
+
+          !--- Copy to Sfcprop and free temporary arrays:
+          call catchem_am4%copy_emiairc(Model, Sfcprop, Atm_block)
+         end if
+
+
+        !--- open dfdage file
+        infile=trim(indir)//'/'//trim(fn_dfdage)
+        amiopen=open_file(dfdage_restart, trim(infile), 'read', domain=fv_domain, is_restart=.true., dont_add_res_to_filename=.true.)
+        if (.not.amiopen) call mpp_error( FATAL, 'Error with opening file'//trim(infile) )
+
+        ! Register axes and variables, allocate memory
+        call catchem_am4%register_dfdage(dfdage_restart, Atm_block)
+
+        !--- read dfdage restart/data
+        call mpp_error(NOTE,'reading dfdage from INPUT/dfdage_data.tile*.nc')
+        call read_restart(dfdage_restart)
+        call close_file(dfdage_restart)
+
+        !--- Copy to Sfcprop and free temporary arrays:
+        call catchem_am4%copy_dfdage(Model, Sfcprop, Atm_block)
+
+        !----------------------------------------------
+
+        !--- open depvel file
+        infile=trim(indir)//'/'//trim(fn_depvel)
+        amiopen=open_file(depvel_restart, trim(infile), 'read', domain=fv_domain, is_restart=.true., dont_add_res_to_filename=.true.)
+        if (.not.amiopen) call mpp_error( FATAL, 'Error with opening file'//trim(infile) )
+
+        ! Register axes and variables, allocate memory
+        call catchem_am4%register_depvel(depvel_restart, Atm_block)
+
+        !--- read depvel restart/data
+        call mpp_error(NOTE,'reading depvel from INPUT/depvel_data.tile*.nc')
+        call read_restart(depvel_restart)
+        call close_file(depvel_restart)
+
+        !--- Copy to Sfcprop and free temporary arrays:
+        call catchem_am4%copy_depvel(Model, Sfcprop, Atm_block)
+
+        !----------------------------------------------
+
+      endif
+
     endif if_catchem  ! CATChem
 
 

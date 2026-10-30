@@ -4239,7 +4239,7 @@ module GFS_diagnostics
       ExtDiag(idx)%axes = 2
       ExtDiag(idx)%unit = 'kg/m2/s'
       ExtDiag(idx)%mod_name = 'gfs_phys'
-     else if (num >= 7 .and. Model%aer_ra_feedback > 0) then
+     else if (num >= 7) then
      if (num == 7) then
       ExtDiag(idx)%name = 'maod'
       ExtDiag(idx)%desc = 'MIE AOD'
@@ -4276,7 +4276,7 @@ module GFS_diagnostics
       ExtDiag(idx)%axes = 2
       ExtDiag(idx)%unit = ' '
       ExtDiag(idx)%mod_name = 'gfs_phys'
-     endif !(num >= 7 .and. Model%aer_ra_feedback > 0) then
+     endif ! AOD diagnostic slots
      endif !num < 12
 
         ExtDiag(idx)%data%var2 => IntDiag%abem(:,num)
@@ -4310,6 +4310,256 @@ module GFS_diagnostics
       ExtDiag(idx)%mod_name = 'gfs_phys'
         ExtDiag(idx)%data%var2 => IntDiag%aecm(:,num)
     end do
+
+    ! For AM4 diag
+    if (Model%gaschem_opt == 1 .or. Model%do_am4chem) then
+      if (associated(IntDiag%bioem)) then
+        do num = 1, size(IntDiag%bioem, dim=2)
+          idx = idx + 1
+          select case (num)
+            case (1)
+              ExtDiag(idx)%name = 'em_dms'
+              ExtDiag(idx)%desc = 'dms emissions'
+            case (2)
+              ExtDiag(idx)%name = 'ebio_isop'
+              ExtDiag(idx)%desc = 'biogenic emissions for ISOP'
+            case (3)
+              ExtDiag(idx)%name = 'ebio_terp'
+              ExtDiag(idx)%desc = 'biogenic emissions for C10H16'
+            case (4)
+              ExtDiag(idx)%name = 'lnox'
+              ExtDiag(idx)%desc = 'lightning NOx emissions'
+          end select
+
+          ExtDiag(idx)%axes = 2
+          ExtDiag(idx)%unit = 'mol/km2/hr'
+          ExtDiag(idx)%mod_name = 'gfs_phys'
+          ExtDiag(idx)%intpl_method = 'bilinear'
+          ExtDiag(idx)%data%var2 => IntDiag%bioem(:,num)
+        enddo
+      end if
+
+      if (associated(IntDiag%bmbem)) then
+        do num = 1, size(IntDiag%bmbem, dim=2)
+          idx = idx + 1
+          select case (num)
+            case (1)
+              ExtDiag(idx)%name = 'ebu_co'
+              ExtDiag(idx)%desc = 'biomass burning emissions for CO'
+            case (2)
+              ExtDiag(idx)%name = 'ebu_ch4'
+              ExtDiag(idx)%desc = 'biomass burning emissions for CH4'
+            case (3)
+              ExtDiag(idx)%name = 'ebu_nh3'
+              ExtDiag(idx)%desc = 'biomass burning emissions for NH3'
+            case (4)
+              ExtDiag(idx)%name = 'ebu_so2'
+              ExtDiag(idx)%desc = 'biomass burning emissions for SO2'
+            case (5)
+              ExtDiag(idx)%name = 'ebu_terp'
+              ExtDiag(idx)%desc = 'biomass burning emissions for C10H16'
+            case (6)
+              ExtDiag(idx)%name = 'ebu_bc'
+              ExtDiag(idx)%desc = 'biomass burning emissions for BC'
+          end select
+
+          ExtDiag(idx)%axes = 2
+          ExtDiag(idx)%unit = 'mol/km2/hr'
+          ExtDiag(idx)%mod_name = 'gfs_phys'
+          ExtDiag(idx)%intpl_method = 'bilinear'
+          ExtDiag(idx)%data%var2 => IntDiag%bmbem(:,num)
+        enddo
+      endif
+
+      if (associated(IntDiag%antem)) then
+        do num = 1, size(IntDiag%antem, dim=2)
+          idx = idx + 1
+          select case (num)
+            case (1)
+              ExtDiag(idx)%name = 'etot_co'
+              ExtDiag(idx)%desc = 'total emissions for CO exclude bmb'
+            case (2)
+              ExtDiag(idx)%name = 'etot_ch4'
+              ExtDiag(idx)%desc = 'total emissions for CH4 exclude bmb'
+            case (3)
+              ExtDiag(idx)%name = 'etot_nh3'
+              ExtDiag(idx)%desc = 'total emissions for NH3 exclude bmb'
+            case (4)
+              ExtDiag(idx)%name = 'etot_so2'
+              ExtDiag(idx)%desc = 'total emissions for SO2 exclude bmb'
+            case (5)
+              ExtDiag(idx)%name = 'etot_terp'
+              ExtDiag(idx)%desc = 'total emissions for C10H16 exclude bmb'
+            case (6)
+              ExtDiag(idx)%name = 'etot_bc'
+              ExtDiag(idx)%desc = 'total emissions for BC exclude bmb'
+          end select
+
+          ExtDiag(idx)%axes = 2
+          ExtDiag(idx)%unit = 'mol/km2/hr'
+          ExtDiag(idx)%mod_name = 'gfs_phys'
+          ExtDiag(idx)%intpl_method = 'bilinear'
+          ExtDiag(idx)%data%var2 => IntDiag%antem(:,num)
+        enddo
+      endif
+
+      if (associated(IntDiag%flash_freq)) then
+        idx = idx + 1
+        ExtDiag(idx)%axes = 2
+        ExtDiag(idx)%name = 'flash_freq'
+        ExtDiag(idx)%desc = 'flash frequency'
+        ExtDiag(idx)%unit = 'flashes/cm2/s'
+        ExtDiag(idx)%mod_name = 'gfs_phys'
+        ExtDiag(idx)%intpl_method = 'bilinear'
+        ExtDiag(idx)%data%var2 => IntDiag%flash_freq(:)
+      endif
+
+      if (associated(IntDiag%ptrop)) then
+        idx = idx + 1
+        ExtDiag(idx)%axes = 2
+        ExtDiag(idx)%name = 'ptrop'
+        ExtDiag(idx)%desc = 'tropopause pressure'
+        ExtDiag(idx)%unit = 'Pa'
+        ExtDiag(idx)%mod_name = 'gfs_phys'
+        ExtDiag(idx)%intpl_method = 'bilinear'
+        ExtDiag(idx)%data%var2 => IntDiag%ptrop(:)
+      endif
+
+      if (associated(IntDiag%jval)) then
+        do num = 1, size(IntDiag%jval, dim=3)
+          idx = idx + 1
+          select case (num)
+            case (1)
+              ExtDiag(idx)%name = 'jn2o'
+              ExtDiag(idx)%desc = 'photolysis rate of n2o'
+            case (2)
+              ExtDiag(idx)%name = 'jo1d'
+              ExtDiag(idx)%desc = 'photolysis rate of O1D'
+            case (3)
+              ExtDiag(idx)%name = 'jno2'
+              ExtDiag(idx)%desc = 'photolysis rate of NO2'
+          end select
+
+          ExtDiag(idx)%axes = 3
+          ExtDiag(idx)%unit = 's-1'
+          ExtDiag(idx)%mod_name = 'gfs_phys'
+          ExtDiag(idx)%intpl_method = 'bilinear'
+          ExtDiag(idx)%data%var3 => IntDiag%jval(:,:,num)
+        enddo
+      endif
+
+      if (associated(IntDiag%ddep)) then
+        do num = 1, size(IntDiag%ddep, dim=2)
+          idx = idx + 1
+          select case (num)
+            case (1)
+              ExtDiag(idx)%name = 'o3_ddep'
+              ExtDiag(idx)%desc = 'dry deposition for o3'
+            case (2)
+              ExtDiag(idx)%name = 'nh3_ddep'
+              ExtDiag(idx)%desc = 'dry deposition for nh3'
+            case (3)
+              ExtDiag(idx)%name = 'so4_ddep'
+              ExtDiag(idx)%desc = 'dry deposition for so4'
+          end select
+
+          ExtDiag(idx)%axes = 2
+          ExtDiag(idx)%unit = 'kg/m2/s'
+          ExtDiag(idx)%mod_name = 'gfs_phys'
+          ExtDiag(idx)%intpl_method = 'bilinear'
+          ExtDiag(idx)%data%var2 => IntDiag%ddep(:,num)
+        enddo
+      endif
+
+      if (associated(IntDiag%wdep)) then
+        do num = 1, size(IntDiag%wdep, dim=2)
+          idx = idx + 1
+          select case (num)
+            case (1)
+              ExtDiag(idx)%name = 'so2_wdep'
+              ExtDiag(idx)%desc = 'wet deposition for so2'
+            case (2)
+              ExtDiag(idx)%name = 'nh3_wdep'
+              ExtDiag(idx)%desc = 'wet deposition for nh3'
+            case (3)
+              ExtDiag(idx)%name = 'so4_wdep'
+              ExtDiag(idx)%desc = 'wet deposition for so4'
+          end select
+
+          ExtDiag(idx)%axes = 2
+          ExtDiag(idx)%unit = 'kg/m2/s'
+          ExtDiag(idx)%mod_name = 'gfs_phys'
+          ExtDiag(idx)%intpl_method = 'bilinear'
+          ExtDiag(idx)%data%var2 => IntDiag%wdep(:,num)
+        enddo
+      endif
+
+      idx = idx + 1
+      ExtDiag(idx)%axes = 3
+      ExtDiag(idx)%name = 'ox_prod'
+      ExtDiag(idx)%desc = 'o3 chemical production'
+      ExtDiag(idx)%unit = 'mol mol-1 s-1'
+      ExtDiag(idx)%mod_name = 'gfs_phys'
+      ExtDiag(idx)%intpl_method = 'bilinear'
+      ExtDiag(idx)%data%var3 => IntDiag%ox_prod(:,:)
+      idx = idx + 1
+      ExtDiag(idx)%axes = 3
+      ExtDiag(idx)%name = 'ox_loss'
+      ExtDiag(idx)%desc = 'o3 chemical loss'
+      ExtDiag(idx)%unit = 'mol mol-1 s-1'
+      ExtDiag(idx)%mod_name = 'gfs_phys'
+      ExtDiag(idx)%intpl_method = 'bilinear'
+      ExtDiag(idx)%data%var3 => IntDiag%ox_loss(:,:)
+      idx = idx + 1
+      ExtDiag(idx)%axes = 3
+      ExtDiag(idx)%name = 'lch4_prod'
+      ExtDiag(idx)%desc = 'ch4 chemical loss due to oh'
+      ExtDiag(idx)%unit = 'mol mol-1 s-1'
+      ExtDiag(idx)%mod_name = 'gfs_phys'
+      ExtDiag(idx)%intpl_method = 'bilinear'
+      ExtDiag(idx)%data%var3 => IntDiag%lch4_prod(:,:)
+      idx = idx + 1
+      ExtDiag(idx)%axes = 3
+      ExtDiag(idx)%name = 'ch4_loss'
+      ExtDiag(idx)%desc = 'ch4 chemical loss due to oh, o1d, cl'
+      ExtDiag(idx)%unit = 'mol mol-1 s-1'
+      ExtDiag(idx)%mod_name = 'gfs_phys'
+      ExtDiag(idx)%intpl_method = 'bilinear'
+      ExtDiag(idx)%data%var3 => IntDiag%ch4_loss(:,:)
+      idx = idx + 1
+      ExtDiag(idx)%axes = 3
+      ExtDiag(idx)%name = 'oh_prod'
+      ExtDiag(idx)%desc = 'oh chemical production'
+      ExtDiag(idx)%unit = 'mol mol-1 s-1'
+      ExtDiag(idx)%mod_name = 'gfs_phys'
+      ExtDiag(idx)%intpl_method = 'bilinear'
+      ExtDiag(idx)%data%var3 => IntDiag%oh_prod(:,:)
+      idx = idx + 1
+      ExtDiag(idx)%axes = 3
+      ExtDiag(idx)%name = 'oh_loss'
+      ExtDiag(idx)%desc = 'oh chemical loss'
+      ExtDiag(idx)%unit = 'mol mol-1 s-1'
+      ExtDiag(idx)%mod_name = 'gfs_phys'
+      ExtDiag(idx)%intpl_method = 'bilinear'
+      ExtDiag(idx)%data%var3 => IntDiag%oh_loss(:,:)
+      idx = idx + 1
+      ExtDiag(idx)%axes = 3
+      ExtDiag(idx)%name = 'h2_prod'
+      ExtDiag(idx)%desc = 'h2 chemical production'
+      ExtDiag(idx)%unit = 'mol mol-1 s-1'
+      ExtDiag(idx)%mod_name = 'gfs_phys'
+      ExtDiag(idx)%intpl_method = 'bilinear'
+      ExtDiag(idx)%data%var3 => IntDiag%h2_prod(:,:)
+      idx = idx + 1
+      ExtDiag(idx)%axes = 3
+      ExtDiag(idx)%name = 'h2_loss'
+      ExtDiag(idx)%desc = 'h2 chemical loss'
+      ExtDiag(idx)%unit = 'mol mol-1 s-1'
+      ExtDiag(idx)%mod_name = 'gfs_phys'
+      ExtDiag(idx)%intpl_method = 'bilinear'
+      ExtDiag(idx)%data%var3 => IntDiag%h2_loss(:,:)
+
+    endif  !gaschem_opt
 
   endif
 

@@ -265,13 +265,19 @@ module GFS_typedefs
     real (kind=kind_phys), pointer :: snodi  (:)   => null()  !< snow depth over ice
     real (kind=kind_phys), pointer :: weasdi (:)   => null()  !< weasd over ice
     real (kind=kind_phys), pointer :: hprime (:,:) => null()  !< orographic metrics
+    ! Chemistry
     real (kind=kind_phys), pointer :: dust_in(:,:,:)     => null()  !< fengsha dust input
     real (kind=kind_phys), pointer :: emi_in_cplchp (:,:) => null()  !< anthropogenic background input
     real (kind=kind_phys), pointer :: emi2_in(:,:,:)   => null()  !< anthropogenic background 3D input
     real (kind=kind_phys), pointer :: fire_MODIS (:,:) => null()  !< anthropogenic fire MODIS input
     real (kind=kind_phys), pointer :: fire_GBBEPx(:,:,:) => null()  !< anthropogenic fire GBBEPx input
+    real (kind=kind_phys), pointer :: dfdage_in(:,:,:)   => null()  !< cfc destruction rate
+    real (kind=kind_phys), pointer :: depvel_in(:,:)   => null()  !< drydep velocity
     real (kind=kind_phys), pointer :: dust12m_in  (:,:,:) => null()  !< fengsha dust input
     real (kind=kind_phys), pointer :: emi_in (:,:) => null()  !< anthropogenic background input
+    real (kind=kind_phys), pointer :: emi3d_in_cplchp (:,:,:) => null()  !< vertically distributed biomass burning emissions
+    real (kind=kind_phys), pointer :: emiairc_in_cplchp (:,:,:) => null()  !< aircraft emissions
+    real (kind=kind_phys), pointer :: emivol_in_cplchp (:,:,:) => null()  !< volcanic emissions
     real (kind=kind_phys), pointer :: smoke_RRFS(:,:,:) => null()  !< RRFS fire input hourly
     real (kind=kind_phys), pointer :: smoke2d_RRFS(:,:) => null()  !< RRFS fire input daily
     real (kind=kind_phys), pointer :: z0base (:)   => null()  !< background or baseline surface roughness length in m
@@ -691,13 +697,17 @@ module GFS_typedefs
     !-- prognostic updraft area fraction coupling in convection
     real (kind=kind_phys), pointer :: dqdt_qmicro(:,:) => null()  !< instantanious microphysics tendency to be passed from MP to convection
     !-- chemistry coupling
-    real (kind=kind_phys), pointer :: buffer_ebu (:,:,:,:)   => null()  !<   
+    real (kind=kind_phys), pointer :: buffer_ebu (:,:,:,:)   => null()  !<
     !-- lake surface temperature from cdeps inline
     real (kind=kind_phys), pointer :: mask_dat   (:) => null()   !< land-sea mask from cdeps inline
     real (kind=kind_phys), pointer :: tsfco_dat  (:) => null()   !< sfc temperature from cdeps inline
     real (kind=kind_phys), pointer :: tice_dat   (:) => null()   !< sfc temperature over ice from cdeps inline
     real (kind=kind_phys), pointer :: hice_dat   (:) => null()   !< sfc ice thickness from cdeps inline
     real (kind=kind_phys), pointer :: fice_dat   (:) => null()   !< sfc ice fraction from cdeps inline
+    !--- instantaneous total moisture tendency for smoke coupling:
+    real (kind=kind_phys), pointer :: dqdti   (:,:)   => null()  !< rrfs_smoke=true only; instantaneous total moisture tendency (kg/kg/s)
+    ! Total SAMF precipitation flux; interface 1 is the surface.
+    real(kind=kind_phys), pointer :: pfl_cnv(:,:) => null()
 
     contains
       procedure :: create  => coupling_create  !<   allocate array data
@@ -1527,6 +1537,7 @@ module GFS_typedefs
     real(kind=kind_phys) :: pert_scale_plume  ! Scaling factor for emissions of plume rising
     real(kind=kind_phys) :: pert_scale_seas   ! Scaling factor for emissions of sea spray
 
+
 !--- tracer handling
     character(len=32), pointer :: tracer_names(:) !< array of initialized tracers from dynamic core
     integer              :: ntrac                 !< number of tracers
@@ -1630,11 +1641,42 @@ module GFS_typedefs
     integer              :: ntbcb           !< tracer index for BCPHOBIC
     integer              :: ntocl           !< tracer index for OCPHILIC
     integer              :: ntocb           !< tracer index for OCPHOBIC
+    !--- JianHe: tracer index for GFDL-AM4 species for now
+    integer              :: ntnh3 = physics_no_tracer
+    integer              :: ntco = physics_no_tracer
+    integer              :: ntch4 = physics_no_tracer
+    integer              :: ntch2o = physics_no_tracer
+    integer              :: ntc2h4 = physics_no_tracer
+    integer              :: ntc2h6 = physics_no_tracer
+    integer              :: ntc3h6 = physics_no_tracer
+    integer              :: ntc3h8 = physics_no_tracer
+    integer              :: ntc4h10 = physics_no_tracer
+    integer              :: ntisop = physics_no_tracer
+    integer              :: ntc10h16 = physics_no_tracer
+    integer              :: ntch3oh = physics_no_tracer
+    integer              :: ntc2h5oh = physics_no_tracer
+    integer              :: ntch3coch3 = physics_no_tracer
+    integer              :: ntch3cho = physics_no_tracer
+    integer              :: nth2 = physics_no_tracer
+    integer              :: nte90 = physics_no_tracer
+    integer              :: ntage = physics_no_tracer
+    integer              :: ntoh = physics_no_tracer
+    integer              :: ntsoa = physics_no_tracer
+    integer              :: ntso4 = physics_no_tracer
+    integer              :: ntaoanh = physics_no_tracer
+    integer              :: ntextinct = physics_no_tracer
+    !
     integer              :: ndchm           !< number of diagnostic chemical tracers (not advected)
     integer              :: ndchs           !< tracer index for first diagnostic chemical tracer
     integer              :: ndche           !< tracer index for last diagnostic chemical tracer
     logical, pointer     :: ntdiag(:) => null() !< array to control diagnostics for chemical tracers
     real(kind=kind_phys), pointer :: fscav(:)  => null() !< array of aerosol scavenging coefficients
+
+    !--- input data for catchem
+    integer              :: nvar_emi = 10
+    integer              :: nvar_emi3d = 16, nvar_emiairc = 6, nvar_emivol = 1
+    integer              :: nvar_gbbepx = 5
+    integer              :: nvar_gbbepxp2 = 7
 
     !--- derived totals for phy_f*d
     integer              :: ntot2d          !< total number of variables for phyf2d
@@ -1696,13 +1738,58 @@ module GFS_typedefs
     logical              :: enh_mix
     real(kind=kind_phys) :: smoke_dir_fdb_coef(7) !< smoke & dust direct feedbck coefficents
     real(kind=kind_phys) :: smoke_conv_wet_coef(3) !< smoke & dust convective wet removal coefficents
-    integer              :: wetdep_ls_cpl  !< large scale wetdepostion, 0: Thompson inline, 1: GOCART offline 
+    integer              :: wetdep_ls_cpl  !< large scale wetdepostion, 0: Thompson inline, 1: GOCART offline
 !--- debug flags
     logical              :: debug
     logical              :: pre_rad         !< flag for testing purpose
     logical              :: print_diff_pgr  !< print average change in pgr every timestep (does not need debug flag)
 
 !-- chem nml variables for CATChem
+    logical              :: read_emis3d     !< flag for reading 3d emission files
+    logical              :: read_emiairc    !< flag for reading aircraft emissions
+    logical              :: do_am4chem      !< flag for am4 chemistry
+    integer              :: chem_opt        !JianHe: chemistry option for
+                                            !combination of gas&aerosol scheme
+                                            !100=Placeholder for GHG tracers only
+                                            !200=Placeholder for SMOKE tracers only
+                                            !300=default, GSL gocart+simple chem
+                                            !400=AM4 gaschem+GSL gocart
+                                            !401=AM4 gaschem+aero
+    integer              :: gaschem_onoff
+    integer              :: gaschem_opt     !JianHe: chemical mechanism option
+                                            !0 = no explicit gas-phase chemistry,
+                                            !but use simple chem in gocart
+                                            !1 = AM4 gas-phase chemistry
+    integer              :: phot_opt        !JianHe: photolysis option
+                                            !0 = no photolysis
+                                            !1 = AM4 FastJ
+    integer              :: photdt          !JianHe: not used, by default,
+                                            !we use dt_phys
+    integer              :: gas_drydep_opt  !JianHe: drydep scheme for gas
+                                            !0=no drydep
+                                            !1=AM4 gas drydep
+    integer              :: gas_wetdep_opt  !JianHe: ls wetdep scheme for gas
+                                            !0=no wetdep
+                                            !1=AM4 gas wetdep
+    integer              :: chem_in_opt     !JianHe: chemical ic input
+                                            !0=default, no ic input
+                                            !1=with ic input
+    integer              :: aerchem_opt     !JianHe: aerosol scheme
+                                            !0, no aerosol scheme
+                                            !1=default, GSL gocart
+                                            !2= TBD
+    integer              :: lnox_opt
+    real(kind=kind_phys) :: lght_no_prd_factor
+    real(kind=kind_phys) :: lght_flash_factor
+    real(kind=kind_phys) :: min_land_frac_lght
+    logical              :: normalize_lght_no_prd_area
+    integer              :: soa_opt         !JianHe: soa scheme
+                                            !0 = no soa formation
+                                            !1 = AM4 soa
+    real(kind=kind_phys) :: isoprene_SOA_yield        ! used for AM4 SOA
+    real(kind=kind_phys) :: terpene_SOA_yield         ! used for AM4 SOA
+    logical              :: use_interactive_BVOC_emis ! used for AM4 SOA
+
     integer              :: aer_bc_opt
     integer              :: aer_ic_opt
     integer              :: aer_ra_feedback
@@ -1710,12 +1797,10 @@ module GFS_typedefs
     integer              :: bio_emiss_opt
     integer              :: biomass_burn_cplchp
     integer              :: chem_conv_tr
-    integer              :: chem_in_opt
-    integer              :: chem_opt
     integer              :: chemdt
     integer              :: cldchem_onoff
     integer              :: dmsemis_opt
-    integer              :: dust_opt_cplchp                                                                                                                          
+    integer              :: dust_opt_cplchp
     real(kind=kind_phys) :: dust_alpha_catc
     real(kind=kind_phys) :: dust_gamma_catc
     integer              :: dust_calcdrag
@@ -1723,10 +1808,7 @@ module GFS_typedefs
     integer              :: emiss_opt
     integer              :: gas_bc_opt
     integer              :: gas_ic_opt
-    integer              :: gaschem_onoff
     integer              :: kemit
-    integer              :: phot_opt
-    integer              :: photdt
     integer              :: plumerisefire_frq_cplchp
     integer              :: plumerise_flag
     integer              :: seas_opt_cplchp
@@ -1734,8 +1816,11 @@ module GFS_typedefs
     real(kind=kind_phys) :: seas_emis_scale(5)
     integer              :: vertmix_onoff
     integer              :: aer_ra_frq
+    integer              :: wetdep_ls_cplchp
+
     character(len=512)   :: restart_inname  ! chemistry restart input directory
     character(len=512)   :: restart_outname ! chemistry restart output directory
+
 
 !--- variables modified at each time step
     integer              :: ipt             !< index for diagnostic printout point
@@ -2039,6 +2124,7 @@ module GFS_typedefs
     real (kind=kind_phys), pointer :: tsflw (:)    => null()  !< surface air temp during lw calculation in k
     real (kind=kind_phys), pointer :: semis (:)    => null()  !< surface lw emissivity in fraction
     real (kind=kind_phys), pointer :: ext550 (:,:) => null()  !< aerosol optical extinction from radiation
+    real (kind=kind_phys), pointer :: aerosol_ext_1um(:,:) => null() ! 
 
 !--- In/Out (???) (radiaition only)
     real (kind=kind_phys), pointer :: coszdg(:)    => null()  !< daytime mean cosz over rad call period
@@ -2369,6 +2455,25 @@ module GFS_typedefs
     real (kind=kind_phys), pointer :: cclu (:)    => null()    ! Clumping Index
     real (kind=kind_phys), pointer :: cpopu(:)    => null()    ! Population density
 
+    real (kind=kind_phys), pointer :: bioem(:,:) => null()    !< instantaneous biogenic emissions for dms, isop, terp, and lnox ( mol km^-2 hr^-1 )
+    real (kind=kind_phys), pointer :: bmbem(:,:) => null()    !< instantaneous biomass burnrning emissions for co, ch4, nh3, and terp  ( mol km^-2 hr^-1 )
+    real (kind=kind_phys), pointer :: antem(:,:) => null()    !< instantaneous anthropogenic emissions for co, ch4, so2,and nh3 ( mol km^-2 hr^-1 )
+
+    real (kind=kind_phys), pointer :: flash_freq(:) => null()    !< flash frequency (cm^-2 s^-1 )
+    real (kind=kind_phys), pointer :: ptrop(:) => null()    !< instantaneous tropopause pressure (Pa)
+    real (kind=kind_phys), pointer :: jval(:,:,:) => null()    !< instantaneous photolysis rates
+    real (kind=kind_phys), pointer :: ddep(:,:) => null()    !< instantaneous dry deposition  ( kg/m**2/s )
+    real (kind=kind_phys), pointer :: wdep(:,:) => null()    !< instantaneous wet deposition  ( kg/m**2/s )
+    real (kind=kind_phys), pointer :: ox_prod(:,:) => null()    !< O3 chemical production
+    real (kind=kind_phys), pointer :: ox_loss(:,:) => null()    !< O3 chemical loss
+    real (kind=kind_phys), pointer :: lch4_prod(:,:) => null()  !< CH4-OH chemical loss
+    real (kind=kind_phys), pointer :: ch4_loss(:,:) => null()   !< CH4 chemical loss
+    real (kind=kind_phys), pointer :: oh_prod(:,:) => null()    !< OH chemical production
+    real (kind=kind_phys), pointer :: oh_loss(:,:) => null()    !< OH chemical loss
+    real (kind=kind_phys), pointer :: h2_prod(:,:) => null()    !< H2 chemical production
+    real (kind=kind_phys), pointer :: h2_loss(:,:) => null()    !< H2 chemical loss
+
+
     ! Auxiliary output arrays for debugging
     real (kind=kind_phys), pointer :: aux2d(:,:)  => null()    !< auxiliary 2d arrays in output (for debugging)
     real (kind=kind_phys), pointer :: aux3d(:,:,:)=> null()    !< auxiliary 2d arrays in output (for debugging)
@@ -2579,11 +2684,25 @@ module GFS_typedefs
     allocate (Sfcprop%smoke_RRFS(IM,24,2))
     allocate (Sfcprop%smoke2d_RRFS(IM,5))
     allocate (Sfcprop%emi_in   (IM,1))
-    allocate (Sfcprop%emi_in_cplchp   (IM,10))
+
     allocate (Sfcprop%dust_in  (IM,12,5))
     allocate (Sfcprop%emi2_in  (IM,Model%levs,3))
     allocate (Sfcprop%fire_MODIS  (IM,13))
-    allocate (Sfcprop%fire_GBBEPx (IM,5,35))
+
+    !In the future, we only need one of them?
+    if (Model%gaschem_opt == 1) then
+      allocate (Sfcprop%emi_in_cplchp (IM,30)) !JianHe: for AM4
+      allocate (Sfcprop%emi3d_in_cplchp (IM,7,16)) !JianHe: for AM4
+      allocate (Sfcprop%emiairc_in_cplchp (IM,25,6)) !JianHe: for AM4
+      allocate (Sfcprop%emivol_in_cplchp (IM,12,1)) !JianHe: for AM4
+      allocate (Sfcprop%fire_GBBEPx (IM,22,35))
+      allocate (Sfcprop%dfdage_in  (IM,72,8)) !72
+      allocate (Sfcprop%depvel_in  (IM,22)) ! 22
+    else ! gsl-gocart aerosol
+      allocate (Sfcprop%emi_in_cplchp   (IM,10))
+      allocate (Sfcprop%fire_GBBEPx (IM,5,35))
+    end if
+
     allocate (Sfcprop%albdirvis_lnd (IM))
     allocate (Sfcprop%albdirnir_lnd (IM))
     allocate (Sfcprop%albdifvis_lnd (IM))
@@ -2646,6 +2765,11 @@ module GFS_typedefs
     Sfcprop%emi2_in   = clear_val
     Sfcprop%fire_MODIS  = clear_val
     Sfcprop%fire_GBBEPx = clear_val
+    if (associated(Sfcprop%dfdage_in)) Sfcprop%dfdage_in = clear_val
+    if (associated(Sfcprop%depvel_in)) Sfcprop%depvel_in = clear_val
+    if (associated(Sfcprop%emi3d_in_cplchp)) Sfcprop%emi3d_in_cplchp = clear_val
+    if (associated(Sfcprop%emiairc_in_cplchp)) Sfcprop%emiairc_in_cplchp = clear_val
+    if (associated(Sfcprop%emivol_in_cplchp)) Sfcprop%emivol_in_cplchp = clear_val
     Sfcprop%albdirvis_lnd = clear_val
     Sfcprop%albdirnir_lnd = clear_val
     Sfcprop%albdifvis_lnd = clear_val
@@ -3398,6 +3522,16 @@ module GFS_typedefs
       endif
     endif
 
+    if (Model%rrfs_sd .or. Model%cplchp) then
+      allocate (Coupling%dqdti (IM,Model%levs))
+      Coupling%dqdti = clear_val
+    endif
+
+    if (Model%cplchp) then
+      allocate (Coupling%pfl_cnv (IM,Model%levs+1))
+      Coupling%pfl_cnv = clear_val
+    endif
+
     ! -- Aerosols coupling options
     if (Model%cplchm .or. Model%cplchp) then
       !--- outgoing instantaneous quantities
@@ -3419,7 +3553,11 @@ module GFS_typedefs
     ! -- CATChem coupling options
     if (Model%cplchp) then
       !-- chemistry coupling buffer
-      allocate (Coupling%buffer_ebu  (IM,Model%levs+1,1,7))
+      if (Model%gaschem_opt == 1 .or. Model%do_am4chem) then
+        allocate (Coupling%buffer_ebu  (IM,Model%levs+1,1,24))
+      else
+        allocate (Coupling%buffer_ebu  (IM,Model%levs+1,1,7))
+      endif
       !-- chemistry coupling feedback to radiation
       Coupling%buffer_ebu   = clear_val
     endif
@@ -4300,37 +4438,54 @@ module GFS_typedefs
     real(kind=kind_phys) :: smoke_conv_wet_coef(3) =(/ 0.50, 0.50, 0.50 /) !< smoke & dust convective wet removal coefficents
 
 !-- chem nml variables for UFS-Chem/CATChem
+    integer              :: chem_opt =300
+    integer              :: chemdt = 450
+    integer              :: gaschem_onoff = 0
+    integer              :: gaschem_opt = 0
+    integer              :: phot_opt = 0
+    integer              :: photdt = 450
+    integer              :: gas_drydep_opt = 0
+    integer              :: gas_wetdep_opt = 0
+    integer              :: cldchem_onoff = 0
+    logical              :: read_emis3d = .false.
+    logical              :: read_emiairc = .false.
+    logical              :: do_am4chem = .false.
+    integer              :: chem_in_opt = 0
+    integer              :: gas_bc_opt = 1
+    integer              :: gas_ic_opt = 1
     integer              :: aer_bc_opt = 1
     integer              :: aer_ic_opt = 1
     integer              :: aer_ra_feedback  = 0
+    integer              :: aer_ra_frq = 60
     integer              :: aerchem_onoff = 1
+    integer              :: aerchem_opt = 1
     integer              :: bio_emiss_opt = 0
     integer              :: biomass_burn_cplchp = 1
     integer              :: chem_conv_tr = 0
-    integer              :: chem_in_opt = 0
-    integer              :: chem_opt =300
-    integer              :: chemdt = 3
-    integer              :: cldchem_onoff = 0
+    integer              :: vertmix_onoff = 1
     integer              :: dmsemis_opt = 1
+    integer              :: lnox_opt = 1
+    real(kind=kind_phys) :: lght_no_prd_factor = 1.
+    real(kind=kind_phys) :: lght_flash_factor = 1.
+    real(kind=kind_phys) :: min_land_frac_lght = 0.1
+    logical              :: normalize_lght_no_prd_area = .true.
     integer              :: dust_opt_cplchp = 5
     real(kind=kind_phys) :: dust_alpha_catc = 2.2
     real(kind=kind_phys) :: dust_gamma_catc = 1.0
     integer              :: dust_calcdrag = 1
     integer              :: emiss_inpt_opt = 1
     integer              :: emiss_opt = 1
-    integer              :: gas_bc_opt = 1
-    integer              :: gas_ic_opt = 1
-    integer              :: gaschem_onoff = 1
     integer              :: kemit = 1
-    integer              :: phot_opt = 1
-    integer              :: photdt = 60
     integer              :: plumerisefire_frq_cplchp = 60
     integer              :: plumerise_flag = 2
     integer              :: seas_opt_cplchp = 2
     integer              :: seas_emis_scheme = -1
     real(kind=kind_phys), dimension(5) :: seas_emis_scale = (/1.0,1.0,1.0,1.0,1.0/)
-    integer              :: vertmix_onoff = 1
-    integer              :: aer_ra_frq = 60
+    integer              :: wetdep_ls_cplchp  = 1
+    integer              :: soa_opt = 1
+    real(kind=kind_phys) :: isoprene_SOA_yield = 0.1
+    real(kind=kind_phys) :: terpene_SOA_yield = 0.1
+    logical              :: use_interactive_BVOC_emis = .false.
     character(len=512)   :: restart_inname = ''
     character(len=512)   :: restart_outname = ''
 
@@ -4563,6 +4718,27 @@ module GFS_typedefs
                           !      land_iau_do_stcsmc_adjustment, land_iau_min_T_increment
 
 
+!--- CATchem namelist
+    NAMELIST /catchem_nml/                                                             &
+                               chem_opt, chemdt, gaschem_onoff, gaschem_opt,           &
+                               phot_opt, photdt, gas_drydep_opt, gas_wetdep_opt,       &
+                               cldchem_onoff, chem_in_opt, &
+                               gas_bc_opt, gas_ic_opt, aer_bc_opt, aer_ic_opt,         &
+                               aerchem_onoff,aerchem_opt,                              &
+                               aer_ra_feedback, aer_ra_frq,                            &
+                               chem_conv_tr,vertmix_onoff,                             &
+                               lnox_opt,lght_no_prd_factor,lght_flash_factor,          &
+                               min_land_frac_lght, normalize_lght_no_prd_area,         &
+                               bio_emiss_opt, biomass_burn_cplchp, dmsemis_opt,        &
+                               dust_opt_cplchp, dust_alpha_catc, dust_gamma_catc,      &
+                               dust_calcdrag, emiss_inpt_opt, emiss_opt, kemit,        &
+                               plumerisefire_frq_cplchp, plumerise_flag,               &
+                               seas_opt_cplchp, seas_emis_scheme, seas_emis_scale,     &
+                               wetdep_ls_cplchp, &
+                               soa_opt, isoprene_SOA_yield, terpene_SOA_yield,         &
+                               use_interactive_BVOC_emis , read_emis3d, read_emiairc,  &
+                               restart_inname, restart_outname
+
 !--- other parameters
     integer :: nctp    =  0                !< number of cloud types in CS scheme
     logical :: gen_coord_hybrid = .false.  !< for Henry's gen coord
@@ -4645,6 +4821,8 @@ module GFS_typedefs
     allocate (Model%input_nml_file, mold=input_nml_file)
     Model%input_nml_file = input_nml_file
     read(Model%input_nml_file, nml=gfs_physics_nml)
+    !catchem nml
+    if (cplchp) read(Model%input_nml_file, nml=catchem_nml)
     ! Set length (number of lines) in namelist for internal reads
     Model%input_nml_file_length = size(Model%input_nml_file)
 #else
@@ -4657,6 +4835,11 @@ module GFS_typedefs
     endif
     rewind(nlunit)
     read (nlunit, nml=gfs_physics_nml)
+    !catchem nml
+    if (cplchp) then
+      rewind(nlunit)
+      read (nlunit, nml=catchem_nml)
+    endif
     close (nlunit)
     ! Set length (number of lines) in namelist for internal reads
     Model%input_nml_file_length = 0
@@ -4666,6 +4849,9 @@ module GFS_typedefs
       write(logunit, '(a80)') '================================================================================'
       write(logunit, '(a64)') phys_version
       write(logunit, nml=gfs_physics_nml)
+      if (cplchp) then
+        write(logunit, nml=catchem_nml)
+      endif
     endif
 
 !--- MPI parameters
@@ -5425,8 +5611,24 @@ module GFS_typedefs
     Model%oz_phys          = oz_phys
     Model%oz_phys_2015     = oz_phys_2015
     Model%h2o_phys         = h2o_phys
-!--- gcafs or UFS-Chem
-    Model%wetdep_ls_cpl    = wetdep_ls_cpl 
+    Model%wetdep_ls_cpl = wetdep_ls_cpl
+
+!CATChem
+    Model%do_am4chem       = do_am4chem .or. (gaschem_opt == 1)
+    Model%gaschem_opt       = gaschem_opt
+    Model%gas_drydep_opt    = gas_drydep_opt
+    Model%gas_wetdep_opt    = gas_wetdep_opt
+    Model%aerchem_opt       = aerchem_opt
+    Model%lnox_opt          = lnox_opt
+    Model%lght_no_prd_factor= lght_no_prd_factor
+    Model%lght_flash_factor = lght_flash_factor
+    Model%min_land_frac_lght= min_land_frac_lght
+    Model%normalize_lght_no_prd_area=normalize_lght_no_prd_area
+    Model%soa_opt           = soa_opt
+    Model%isoprene_SOA_yield = isoprene_SOA_yield
+    Model%terpene_SOA_yield = terpene_SOA_yield
+    Model%use_interactive_BVOC_emis = use_interactive_BVOC_emis
+
     Model%aer_bc_opt        = aer_bc_opt
     Model%aer_ic_opt        = aer_ic_opt
     Model%aer_ra_feedback   = aer_ra_feedback
@@ -5458,8 +5660,12 @@ module GFS_typedefs
     Model%seas_emis_scale   = seas_emis_scale
     Model%vertmix_onoff     = vertmix_onoff
     Model%aer_ra_frq        = aer_ra_frq
+    Model%wetdep_ls_cplchp  = wetdep_ls_cplchp
+    Model%read_emis3d       = read_emis3d
+    Model%read_emiairc      = read_emiairc
     Model%restart_inname    = restart_inname
     Model%restart_outname   = restart_outname
+
 
     Model%pdfcld            = pdfcld
     Model%shcnvcw           = shcnvcw
@@ -5735,6 +5941,24 @@ module GFS_typedefs
     Model%pre_rad          = pre_rad
     Model%print_diff_pgr   = print_diff_pgr
 
+!--- AM4 chemistry option
+#ifdef AM4_CHEM
+    ! overwrite what in the namelist
+    Model%do_am4chem       = .true.
+    Model%chem_opt         = 400
+    Model%gaschem_opt      = 1
+    Model%phot_opt         = 1
+    Model%lnox_opt         = 1
+    Model%lght_no_prd_factor = lght_no_prd_factor
+    Model%lght_flash_factor = lght_flash_factor
+    Model%min_land_frac_lght = min_land_frac_lght
+    Model%normalize_lght_no_prd_area = normalize_lght_no_prd_area
+    Model%soa_opt          = 1
+    Model%gas_drydep_opt   = 1
+    Model%gas_wetdep_opt   = 1
+    Model%wetdep_ls_cplchp = 3
+#endif
+
 !--- tracer handling
     Model%ntrac            = size(tracer_names)
     Model%ntracp1          = Model%ntrac + 1
@@ -5807,7 +6031,6 @@ module GFS_typedefs
 !--- initialize parameters for atmospheric chemistry tracers
     call Model%init_chemistry(tracer_types)
 
-!--- initialize parameters for UFS-Chem chemistry tracers
     if(Model%cplchp .and. Model%ntchm>0) then
     Model%ntso2            = get_physics_tracer_index('so2', Model)
     Model%ntsu             = get_physics_tracer_index('so4', Model)
@@ -5829,7 +6052,54 @@ module GFS_typedefs
     Model%ntss4            = get_physics_tracer_index('seas4', Model)
     Model%ntss5            = get_physics_tracer_index('seas5', Model)
     Model%ntpp10           = get_physics_tracer_index('pp10', Model)
+
+    Model%nvar_emi = 10
+    Model%nvar_gbbepx = 5
+
+    !Add AM4 tracers
+    if (Model%gaschem_opt == 1) then
+    Model%ntno2            = get_physics_tracer_index('no2', Model)
+    Model%ntno             = get_physics_tracer_index('no', Model)
+    Model%ntno2             = get_physics_tracer_index('no2', Model)
+    Model%ntch2o           = get_physics_tracer_index('ch2o', Model)
+    Model%ntnh3            = get_physics_tracer_index('nh3', Model)
+    Model%ntco             = get_physics_tracer_index('co', Model)
+    Model%ntisop           = get_physics_tracer_index('isop', Model)
+    Model%ntch4            = get_physics_tracer_index('ch4', Model)
+    Model%nte90            = get_physics_tracer_index('e90', Model)
+    Model%nth2             = get_physics_tracer_index('h2', Model)
+    Model%ntc2h4           = get_physics_tracer_index('c2h4', Model)
+    Model%ntc2h6           = get_physics_tracer_index('c2h6', Model)
+    Model%ntc3h6           = get_physics_tracer_index('c3h6', Model)
+    Model%ntc3h8           = get_physics_tracer_index('c3h8', Model)
+    Model%ntc4h10          = get_physics_tracer_index('c4h10', Model)
+    Model%ntch3oh          = get_physics_tracer_index('ch3oh', Model)
+    Model%ntc2h5oh         = get_physics_tracer_index('c2h5oh', Model)
+    Model%ntch3coch3       = get_physics_tracer_index('ch3coch3', Model)
+    Model%ntch3cho         = get_physics_tracer_index('ch3cho', Model)
+    Model%ntc10h16         = get_physics_tracer_index('c10h16', Model)
+    Model%ntch3oh          = get_physics_tracer_index('ch3oh', Model)
+    Model%ntc2h5oh         = get_physics_tracer_index('c2h5oh', Model)
+    Model%ntch3coch3       = get_physics_tracer_index('ch3coch3', Model)
+    Model%ntch3cho         = get_physics_tracer_index('ch3cho', Model)
+    Model%ntage            = get_physics_tracer_index('age', Model)
+    Model%ntoh             = get_physics_tracer_index('oh', Model)
+    Model%ntsoa            = get_physics_tracer_index('soa', Model)
+    Model%ntso4            = get_physics_tracer_index('so4', Model)
+    Model%ntaoanh          = get_physics_tracer_index('aoanh', Model)
+    Model%ntextinct        = get_physics_tracer_index('extinction', Model)
+
+    Model%nvar_emi = 30
+    Model%nvar_gbbepx = 22
+    Model%nvar_emi3d = 16
+    Model%nvar_emiairc = 6
+    Model%nvar_emivol = 1
+    endif !gaschem_opt
+
+    Model%nvar_gbbepxp2 = Model%nvar_gbbepx + 2
+
     endif ! cplchp tracers
+
 
 !--- setup aerosol scavenging factors
     call Model%init_scavenging(fscav_aero)
@@ -7076,7 +7346,7 @@ module GFS_typedefs
     if (Model%ntchm > 0) Model%ntche = Model%ntchs + Model%ntchm - 1
     if (Model%ndchm > 0) Model%ndche = Model%ndchs + Model%ndchm - 1
 
-    if (Model%cplchp) then                                                                                                                                           
+    if (Model%cplchp .and. Model%gaschem_opt /= 1 .and. .not. Model%do_am4chem) then
       Model%ntchs = get_physics_tracer_index('so2', Model)
       Model%ntche = get_physics_tracer_index('pp10', Model)
       Model%ntchm = Model%ntche - Model%ntchs + 1
@@ -7727,60 +7997,108 @@ module GFS_typedefs
       print *, ' ndche             : ', Model%ndche
       print *, ' fscav             : ', Model%fscav
       if(Model%cplchp .and. Model%ntchm>0) then
-        print *, ' ntso2             : ', Model%ntso2
-        print *, ' ntsu              : ', Model%ntsu
-        print *, ' ntdms             : ', Model%ntdms
-        print *, ' ntmsa             : ', Model%ntmsa
-        print *, ' ntpp25            : ', Model%ntpp25
-        print *, ' ntbcl             : ', Model%ntbcl
-        print *, ' ntbcb             : ', Model%ntbcb
-        print *, ' ntocl             : ', Model%ntocl
-        print *, ' ntocb             : ', Model%ntocb
-        print *, ' ntdu1             : ', Model%ntdu1
-        print *, ' ntdu2             : ', Model%ntdu2
-        print *, ' ntdu3             : ', Model%ntdu3
-        print *, ' ntdu4             : ', Model%ntdu4
-        print *, ' ntdu5             : ', Model%ntdu5
-        print *, ' ntss1             : ', Model%ntss1
-        print *, ' ntss2             : ', Model%ntss2
-        print *, ' ntss3             : ', Model%ntss3
-        print *, ' ntss4             : ', Model%ntss4
-        print *, ' ntss5             : ', Model%ntss5
-        print *, ' ntpp10            : ', Model%ntpp10
-        print *, ' aer_bc_opt        : ', Model%aer_bc_opt
-        print *, ' aer_ic_opt        : ', Model%aer_ic_opt
-        print *, ' aer_ra_feeback    : ', Model%aer_ra_feedback
-        print *, ' aerchem_onoff     : ', Model%aerchem_onoff
-        print *, ' bio_emiss_opt     : ', Model%bio_emiss_opt
-        print *, ' biomass_burn_cplchp  : ', Model%biomass_burn_cplchp
-        print *, ' chem_conv_tr      : ', Model%chem_conv_tr
-        print *, ' chem_in_opt       : ', Model%chem_in_opt
-        print *, ' chem_opt          : ', Model%chem_opt
-        print *, ' chemdt            : ', Model%chemdt
-        print *, ' cldchem_onoff     : ', Model%cldchem_onoff
-        print *, ' dmsemis_opt       : ', Model%dmsemis_opt
-        print *, ' dust_opt_cplchp   : ', Model%dust_opt_cplchp
-        print *, ' dust_alpha_catc   : ', Model%dust_alpha_catc
-        print *, ' dust_gamma_catc   : ', Model%dust_gamma_catc
-        print *, ' dust_calcdrag     : ', Model%dust_calcdrag
-        print *, ' emiss_inpt_opt    : ', Model%emiss_inpt_opt
-        print *, ' emiss_opt         : ', Model%emiss_opt
-        print *, ' gas_bc_opt        : ', Model%gas_bc_opt
-        print *, ' gas_ic_opt        : ', Model%gas_ic_opt
-        print *, ' gaschem_onoff     : ', Model%gaschem_onoff
-        print *, ' kemit             : ', Model%kemit
-        print *, ' phot_opt          : ', Model%phot_opt
-        print *, ' photdt            : ', Model%photdt
-        print *, ' plumerisefire_frq_cplchp : ', Model%plumerisefire_frq_cplchp
-        print *, ' plumerise_flag    : ', Model%plumerise_flag
-        print *, ' seas_opt_cplchp   : ', Model%seas_opt_cplchp
-        print *, ' seas_emis_scheme  : ', Model%seas_emis_scheme
-        print *, ' seas_emis_scale   : ', Model%seas_emis_scale
-        print *, ' vertmix_onoff     : ', Model%vertmix_onoff
-        print *, ' aer_ra_frq        : ', Model%aer_ra_frq
-        print *, ' restart_inname    : ', Model%restart_inname
-        print *, ' restart_outname   : ', Model%restart_outname
+      print *, ' ntso2             : ', Model%ntso2
+      print *, ' ntsu              : ', Model%ntsu
+      print *, ' ntdms             : ', Model%ntdms
+      print *, ' ntmsa             : ', Model%ntmsa
+      print *, ' ntpp25            : ', Model%ntpp25
+      print *, ' ntbcl             : ', Model%ntbcl
+      print *, ' ntbcb             : ', Model%ntbcb
+      print *, ' ntocl             : ', Model%ntocl
+      print *, ' ntocb             : ', Model%ntocb
+      print *, ' ntdu1             : ', Model%ntdu1
+      print *, ' ntdu2             : ', Model%ntdu2
+      print *, ' ntdu3             : ', Model%ntdu3
+      print *, ' ntdu4             : ', Model%ntdu4
+      print *, ' ntdu5             : ', Model%ntdu5
+      print *, ' ntss1             : ', Model%ntss1
+      print *, ' ntss2             : ', Model%ntss2
+      print *, ' ntss3             : ', Model%ntss3
+      print *, ' ntss4             : ', Model%ntss4
+      print *, ' ntss5             : ', Model%ntss5
+      print *, ' ntpp10            : ', Model%ntpp10
+      !AM4 tracer
+      if (Model%gaschem_opt == 1 .or. Model%do_am4chem) then
+      print *, ' ntno              : ', Model%ntno
+      print *, ' ntno2             : ', Model%ntno2
+      print *, ' ntnh3             : ', Model%ntnh3
+      print *, ' ntco              : ', Model%ntco
+      print *, ' ntch4             : ', Model%ntch4
+      print *, ' ntch2o            : ', Model%ntch2o
+      print *, ' ntc2h4            : ', Model%ntc2h4
+      print *, ' ntc2h6            : ', Model%ntc2h6
+      print *, ' ntc3h6            : ', Model%ntc3h6
+      print *, ' ntc3h8            : ', Model%ntc3h8
+      print *, ' ntc4h10           : ', Model%ntc4h10
+      print *, ' ntisop            : ', Model%ntisop
+      print *, ' ntc10h16          : ', Model%ntc10h16
+      print *, ' ntch3oh           : ', Model%ntch3oh
+      print *, ' ntc2h5oh          : ', Model%ntc2h5oh
+      print *, ' ntch3coch3        : ', Model%ntch3coch3
+      print *, ' ntch3cho          : ', Model%ntch3cho
+      print *, ' nth2              : ', Model%nth2
+      print *, ' nte90             : ', Model%nte90
+      print *, ' ntage             : ', Model%ntage
+      print *, ' ntoh              : ', Model%ntoh
+      print *, ' ntsoa             : ', Model%ntsoa
+      print *, ' ntso4             : ', Model%ntso4
+      print *, ' ntaoanh           : ', Model%ntaoanh
+      print *, ' ntextinct         : ', Model%ntextinct
       endif
+      !
+      print *, ' chem_opt          : ', Model%chem_opt
+      print *, ' chemdt            : ', Model%chemdt
+      print *, ' gaschem_onoff     : ', Model%gaschem_onoff
+      print *, ' gaschem_opt       : ', Model%gaschem_opt
+      print *, ' do_am4chem        : ', Model%do_am4chem
+      print *, ' phot_opt          : ', Model%phot_opt
+      print *, ' photdt            : ', Model%photdt
+      print *, ' gas_drydep_opt    : ', Model%gas_drydep_opt
+      print *, ' gas_wetdep_opt    : ', Model%gas_wetdep_opt
+      print *, ' cldchem_onoff     : ', Model%cldchem_onoff
+      print *, ' chem_in_opt       : ', Model%chem_in_opt
+      print *, ' gas_bc_opt        : ', Model%gas_bc_opt
+      print *, ' gas_ic_opt        : ', Model%gas_ic_opt
+      print *, ' aer_bc_opt        : ', Model%aer_bc_opt
+      print *, ' aer_ic_opt        : ', Model%aer_ic_opt
+      print *, ' aerchem_onoff     : ', Model%aerchem_onoff
+      print *, ' aerchem_opt       : ', Model%aerchem_opt
+      print *, ' aer_ra_feeback    : ', Model%aer_ra_feedback
+      print *, ' aer_ra_frq        : ', Model%aer_ra_frq
+      print *, ' chem_conv_tr      : ', Model%chem_conv_tr
+      print *, ' vertmix_onoff     : ', Model%vertmix_onoff
+      print *, ' bio_emiss_opt     : ', Model%bio_emiss_opt
+      print *, ' biomass_burn_cplchp  : ', Model%biomass_burn_cplchp
+      print *, ' dmsemis_opt       : ', Model%dmsemis_opt
+      print *, ' lnox_opt          : ', Model%lnox_opt
+      print *, ' lght_no_prd_factor: ', Model%lght_no_prd_factor
+      print *, ' lght_flash_factor : ', Model%lght_flash_factor
+      print *, ' min_land_frac_lght: ', Model%min_land_frac_lght
+      print *, ' normalize_lght_no_prd_area: ', Model%normalize_lght_no_prd_area
+      print *, ' dust_opt_cplchp   : ', Model%dust_opt_cplchp
+      print *, ' dust_alpha_catc   : ', Model%dust_alpha_catc
+      print *, ' dust_gamma_catc   : ', Model%dust_gamma_catc
+      print *, ' dust_calcdrag     : ', Model%dust_calcdrag
+      print *, ' emiss_inpt_opt    : ', Model%emiss_inpt_opt
+      print *, ' emiss_opt         : ', Model%emiss_opt
+      print *, ' kemit             : ', Model%kemit
+      print *, ' plumerisefire_frq_cplchp : ', Model%plumerisefire_frq_cplchp
+      print *, ' plumerise_flag    : ', Model%plumerise_flag
+      print *, ' seas_opt_cplchp   : ', Model%seas_opt_cplchp
+      print *, ' seas_emis_scheme  : ', Model%seas_emis_scheme
+      print *, ' seas_emis_scale   : ', Model%seas_emis_scale
+      print *, ' wetdep_ls_cplchp  : ', Model%wetdep_ls_cplchp
+      print *, ' soa_opt           : ', Model%soa_opt
+      print *, ' isoprene_SOA_yield: ', Model%isoprene_SOA_yield
+      print *, ' terpene_SOA_yield : ', Model%terpene_SOA_yield
+      print *, ' use_interactive_BVOC_emis: ', Model%use_interactive_BVOC_emis
+      print *, ' restart_inname    : ', Model%restart_inname
+      print *, ' restart_outname   : ', Model%restart_outname
+      print *, ' read_emis3d       : ', Model%read_emis3d
+      print *, ' read_emiairc      : ', Model%read_emiairc
+
+      endif
+
       print *, ' '
       print *, 'derived totals for phy_f*d'
       print *, ' ntot2d            : ', Model%ntot2d
@@ -8198,6 +8516,7 @@ module GFS_typedefs
     allocate (Radtend%tsflw  (IM))
     allocate (Radtend%semis  (IM))
     allocate (Radtend%ext550 (IM,Model%levs))
+    allocate (Radtend%aerosol_ext_1um (IM,Model%levs))
 
     Radtend%htrsw  = clear_val
     Radtend%htrlw  = clear_val
@@ -8206,6 +8525,7 @@ module GFS_typedefs
     Radtend%tsflw  = clear_val
     Radtend%semis  = clear_val
     Radtend%ext550 = clear_val
+    Radtend%aerosol_ext_1um = 0._kind_phys
 
 !--- In/Out (???) (radiation only)
     allocate (Radtend%coszdg (IM))
@@ -9185,6 +9505,60 @@ module GFS_typedefs
     ! -- dust, sea salt
     allocate (Diag%aecm(IM,6))
     Diag%aecm = zero
+
+    !JianHe: need included in diag_table
+    ! -- initialize online emissions
+    ! for gases (in order): dms, isop (bio), c10h16 (bio), no (lightning)
+    if (Model%gaschem_opt == 1 .or. Model%do_am4chem) then
+      allocate (Diag%bioem(IM,4)) ! dms,isop,c10h16,lnox
+      Diag%bioem = zero
+
+      allocate (Diag%bmbem(IM,6)) ! co,ch4,nh3,so2,terp,bc
+      Diag%bmbem = zero
+
+      allocate (Diag%antem(IM,6)) ! co,ch4,nh3,so2,terp,bc
+      Diag%antem = zero
+
+      allocate (Diag%flash_freq(IM))
+      Diag%flash_freq = zero
+
+    ! -- initialize tropopause pressure
+      allocate(Diag%ptrop(IM))
+      Diag%ptrop = zero
+
+    ! -- initialize photolysis rates
+    ! for gases (in order): n2o(004), o1d(002), no2(006)
+      allocate(Diag%jval(IM,Model%levs,3))
+      Diag%jval = zero
+
+    ! -- initialize drydep
+    !  (in order): o3,nh3,so4
+      allocate(Diag%ddep(IM,3))
+      Diag%ddep = zero
+
+    ! -- initialize wetdep
+    !  (in order): nh3,so4
+      allocate(Diag%wdep(IM,3))
+      Diag%wdep = zero
+
+    ! -- initialize prod/loss
+      allocate(Diag%ox_prod(IM,Model%levs))
+      Diag%ox_prod = zero
+      allocate(Diag%ox_loss(IM,Model%levs))
+      Diag%ox_loss = zero
+      allocate(Diag%lch4_prod(IM,Model%levs))
+      Diag%lch4_prod = zero
+      allocate(Diag%ch4_loss(IM,Model%levs))
+      Diag%ch4_loss = zero
+      allocate(Diag%oh_prod(IM,Model%levs))
+      Diag%oh_prod = zero
+      allocate(Diag%oh_loss(IM,Model%levs))
+      Diag%oh_loss = zero
+      allocate(Diag%h2_prod(IM,Model%levs))
+      Diag%h2_prod = zero
+      allocate(Diag%h2_loss(IM,Model%levs))
+      Diag%h2_loss = zero
+    end if
 
   contains
 

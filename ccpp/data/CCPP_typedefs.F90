@@ -1375,6 +1375,9 @@ contains
 !           if (ntlnc == n .or. ntinc == n .or. ntrnc == n .or. ntsnc == n .or.&
 !               ntrw  == n .or. ntsw  == n .or. ntgl  == n)                    &
                   Interstitial%otspt(tracers+1,1) = .false.
+          ! JianHe: Diagnostic chemistry tracers are not transported.
+          if (Model%ndchm > 0 .and. n >= Model%ndchs .and. n <= Model%ndche) &
+            Interstitial%otspt(tracers+1,:) = .false.
           if (Interstitial%trans_aero .and. Model%ntchs == n) Interstitial%itc = tracers
         endif
       enddo
