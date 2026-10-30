@@ -6059,7 +6059,6 @@ module GFS_typedefs
     if (Model%gaschem_opt == 1) then
     Model%ntno2            = get_physics_tracer_index('no2', Model)
     Model%ntno             = get_physics_tracer_index('no', Model)
-    Model%ntno2            = get_physics_tracer_index('no2', Model)
     Model%ntch2o           = get_physics_tracer_index('ch2o', Model)
     Model%ntnh3            = get_physics_tracer_index('nh3', Model)
     Model%ntco             = get_physics_tracer_index('co', Model)

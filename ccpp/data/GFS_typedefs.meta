@@ -7145,20 +7145,18 @@
   dimensions = ()
   type = integer
 ### IVAI
-[ntno2]
-  standard_name = index_for_no2_chemical_tracer_in_tracer_concentration_array
-  long_name = tracer index for no2 chemical tracer
-  units = index
-  dimensions = ()
-  type = integer
-##  active = (flag_for_air_quality_coupling .and. flag_for_canopy_option)
 [ntno]
-  standard_name = index_for_no_chemical_tracer_in_tracer_concentration_array
-  long_name = tracer index for no chemical tracer
+  standard_name = index_for_no
+  long_name = index for no
   units = index
   dimensions = ()
   type = integer
-##  active = (flag_for_air_quality_coupling .and. flag_for_canopy_option)
+[ntno2]
+  standard_name = index_for_no2
+  long_name = index for no2
+  units = index
+  dimensions = ()
+  type = integer
 [nto3]
   standard_name = index_for_ozone_chemical_tracer_in_tracer_concentration_array
   long_name = tracer index for o3 chemical tracer
