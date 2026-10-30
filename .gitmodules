@@ -1,6 +1,6 @@
 [submodule "fv3/atmos_cubed_sphere"]
   path = fv3/atmos_cubed_sphere
-  url = git@github.com:jianheACM/ufsatm.git
+  url = git@github.com:jianheACM/GFDL_atmos_cubed_sphere.git
   branch = ufschem_v1p1
 [submodule "ccpp/framework"]
   path = ccpp/framework
