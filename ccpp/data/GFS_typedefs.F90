@@ -2463,6 +2463,8 @@ module GFS_typedefs
     real (kind=kind_phys), pointer :: jval(:,:,:) => null()    !< instantaneous photolysis rates
     real (kind=kind_phys), pointer :: ddep(:,:) => null()    !< instantaneous dry deposition  ( kg/m**2/s )
     real (kind=kind_phys), pointer :: wdep(:,:) => null()    !< instantaneous wet deposition  ( kg/m**2/s )
+    real (kind=kind_phys), pointer :: pm25_dry(:,:) => null()   !< dry PM2.5 concentration (ug/m3)
+    real (kind=kind_phys), pointer :: pm10_dry(:,:) => null()   !< dry PM10 concentration (ug/m3)
     real (kind=kind_phys), pointer :: ox_prod(:,:) => null()    !< O3 chemical production
     real (kind=kind_phys), pointer :: ox_loss(:,:) => null()    !< O3 chemical loss
     real (kind=kind_phys), pointer :: lch4_prod(:,:) => null()  !< CH4-OH chemical loss
@@ -9536,6 +9538,14 @@ module GFS_typedefs
     !  (in order): nh3,so4
       allocate(Diag%wdep(IM,3))
       Diag%wdep = zero
+
+    ! -- instantaneous dry PM concentrations, not chemistry tracers
+      if (Model%do_am4chem) then
+        allocate(Diag%pm25_dry(IM,Model%levs))
+        Diag%pm25_dry = zero
+        allocate(Diag%pm10_dry(IM,Model%levs))
+        Diag%pm10_dry = zero
+      endif
 
     ! -- initialize prod/loss
       allocate(Diag%ox_prod(IM,Model%levs))

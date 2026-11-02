@@ -4494,6 +4494,25 @@ module GFS_diagnostics
         enddo
       endif
 
+      if (Model%do_am4chem) then
+        idx = idx + 1
+        ExtDiag(idx)%axes = 3
+        ExtDiag(idx)%name = 'pm25_dry'
+        ExtDiag(idx)%desc = 'dry PM2.5 mass concentration at ambient air volume'
+        ExtDiag(idx)%unit = 'ug/m3'
+        ExtDiag(idx)%mod_name = 'gfs_phys'
+        ExtDiag(idx)%intpl_method = 'bilinear'
+        ExtDiag(idx)%data%var3 => IntDiag%pm25_dry(:,:)
+        idx = idx + 1
+        ExtDiag(idx)%axes = 3
+        ExtDiag(idx)%name = 'pm10_dry'
+        ExtDiag(idx)%desc = 'dry PM10 mass concentration at ambient air volume'
+        ExtDiag(idx)%unit = 'ug/m3'
+        ExtDiag(idx)%mod_name = 'gfs_phys'
+        ExtDiag(idx)%intpl_method = 'bilinear'
+        ExtDiag(idx)%data%var3 => IntDiag%pm10_dry(:,:)
+      endif
+
       idx = idx + 1
       ExtDiag(idx)%axes = 3
       ExtDiag(idx)%name = 'ox_prod'
