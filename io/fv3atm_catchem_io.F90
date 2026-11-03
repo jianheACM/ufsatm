@@ -1004,16 +1004,15 @@ contains
     data%emiairc_name(5)  = 'airc_bc'
     data%emiairc_name(6)  = 'airc_oc'
 
-    !--- register axis
-    call register_axis( restart, "grid_xt", 'X' )
-    call register_axis( restart, "grid_yt", 'Y' )
-    call register_axis( restart, "sigma_full", 25)   !
-    !--- register the 3D fields
-      do num = 1,data%nvar_emiairc
-        var3_p2 => data%emiairc_var(:,:,:,num)
-        call register_restart_field(restart, data%emiairc_name(num), var3_p2,dimensions=[character(len=10) :: 'sigma_full', 'grid_yt', 'grid_xt'],&
-                                  &is_optional=.true.)
-      enddo
+    ! NetCDF fields use (level, lat, lon), with 25 bottom-to-top layers.
+    call register_axis(restart, 'lon', 'X')
+    call register_axis(restart, 'lat', 'Y')
+    call register_axis(restart, 'level', 25)
+    do num = 1, data%nvar_emiairc
+      var3_p2 => data%emiairc_var(:,:,:,num)
+      call register_restart_field(restart, data%emiairc_name(num), var3_p2, &
+                                  dimensions=[character(len=5) :: 'level', 'lat', 'lon'])
+    enddo
 
   end subroutine catchem_am4_register_emiairc
 
