@@ -412,9 +412,11 @@ contains
 
        if (par) then
           ncerr = nf90_var_par_access(ncid, im_varid, NF90_COLLECTIVE); NC_ERR_STOP(ncerr)
-          ncerr = nf90_var_par_access(ncid, lon_varid, NF90_COLLECTIVE); NC_ERR_STOP(ncerr)
           ncerr = nf90_var_par_access(ncid, jm_varid, NF90_COLLECTIVE); NC_ERR_STOP(ncerr)
-          ncerr = nf90_var_par_access(ncid, lat_varid, NF90_COLLECTIVE); NC_ERR_STOP(ncerr)
+          if (.not.metadata_as_fieldbundlewrite) then
+             ncerr = nf90_var_par_access(ncid, lon_varid, NF90_COLLECTIVE); NC_ERR_STOP(ncerr)
+             ncerr = nf90_var_par_access(ncid, lat_varid, NF90_COLLECTIVE); NC_ERR_STOP(ncerr)
+          end if
           ncerr = nf90_var_par_access(ncid, timeiso_varid, NF90_COLLECTIVE); NC_ERR_STOP(ncerr)
           if (is_cubed_sphere) then
              ncerr = nf90_var_par_access(ncid, tile_varid, NF90_COLLECTIVE); NC_ERR_STOP(ncerr)

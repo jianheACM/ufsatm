@@ -2972,7 +2972,7 @@
   dimensions = (horizontal_dimension)
   type = real
   kind = kind_phys
-  active = (flag_for_surface_flux_coupling .or. flag_for_chemistry_coupling .or. flag_for_ocean_wave_coupling .or. do_fire_coupling)
+  active = (flag_for_surface_flux_coupling .or. flag_for_chemistry_coupling .or. flag_for_chemistry_package_coupling .or. flag_for_ocean_wave_coupling .or. do_fire_coupling)
 [v10mi_cpl]
   standard_name = y_wind_at_10m_for_coupling
   long_name = instantaneous V10m
@@ -2980,7 +2980,7 @@
   dimensions = (horizontal_dimension)
   type = real
   kind = kind_phys
-  active = (flag_for_surface_flux_coupling .or. flag_for_chemistry_coupling .or. flag_for_ocean_wave_coupling .or. do_fire_coupling)
+  active = (flag_for_surface_flux_coupling .or. flag_for_chemistry_coupling .or. flag_for_chemistry_package_coupling .or. flag_for_ocean_wave_coupling .or. do_fire_coupling)
 [tsfci_cpl]
   standard_name = surface_skin_temperature_for_coupling
   long_name = instantaneous sfc temperature
@@ -2988,7 +2988,7 @@
   dimensions = (horizontal_dimension)
   type = real
   kind = kind_phys
-  active = (flag_for_surface_flux_coupling .or. flag_for_chemistry_coupling .or. flag_for_land_coupling)
+  active = (flag_for_surface_flux_coupling .or. flag_for_chemistry_coupling .or. flag_for_chemistry_package_coupling .or. flag_for_land_coupling)
 [psurfi_cpl]
   standard_name = surface_air_pressure_for_coupling
   long_name = instantaneous sfc pressure
@@ -9286,7 +9286,7 @@
   dimensions = (horizontal_dimension)
   type = real
   kind = kind_phys
-  active = (flag_for_surface_flux_coupling .or. flag_for_chemistry_coupling .or. flag_for_land_coupling)
+  active = (flag_for_surface_flux_coupling .or. flag_for_chemistry_coupling .or. flag_for_chemistry_package_coupling .or. flag_for_land_coupling)
 [dsnow_cpl]
   standard_name = tendency_of_lwe_thickness_of_snowfall_amount_on_dynamics_timestep_for_coupling
   long_name = change in show_cpl (coupling_type)
@@ -9294,7 +9294,7 @@
   dimensions = (horizontal_dimension)
   type = real
   kind = kind_phys
-  active = (flag_for_surface_flux_coupling .or. flag_for_chemistry_coupling .or. flag_for_land_coupling)
+  active = (flag_for_surface_flux_coupling .or. flag_for_chemistry_coupling .or. flag_for_chemistry_package_coupling .or. flag_for_land_coupling)
 [phy_fctd]
   standard_name = atmosphere_updraft_convective_mass_flux_at_cloud_base_by_cloud_type
   long_name = cloud base mass flux for CS convection
